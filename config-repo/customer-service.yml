@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${CUSTOMER_DB_URL:jdbc:mysql://localhost:3307/customer_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:1234$}
+    password: ${DB_PASSWORD:123456@}
   jpa:
     hibernate:
       ddl-auto: update

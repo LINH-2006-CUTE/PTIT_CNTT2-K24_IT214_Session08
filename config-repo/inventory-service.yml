@@ -1,0 +1,17 @@
+server:
+  port: ${PORT:8093}
+
+spring:
+  datasource:
+    url: ${INVENTORY_DB_URL:jdbc:mysql://localhost:3309/inventory_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:1234$}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    defer-datasource-initialization: true
+    open-in-view: false
+  sql:
+    init:
+      mode: always
+

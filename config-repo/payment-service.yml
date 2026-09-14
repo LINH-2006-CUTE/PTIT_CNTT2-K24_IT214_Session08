@@ -1,0 +1,24 @@
+server:
+  port: ${PORT:8095}
+
+spring:
+  datasource:
+    url: ${PAYMENT_DB_URL:jdbc:mysql://localhost:3311/payment_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:1234$}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    defer-datasource-initialization: true
+    open-in-view: false
+  sql:
+    init:
+      mode: always
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 3000
+            read-timeout: 5000
+

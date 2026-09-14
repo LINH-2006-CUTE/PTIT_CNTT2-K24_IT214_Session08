@@ -1,0 +1,159 @@
+{
+  "info": {
+    "_postman_id": "3f4e1121-52bc-4c6e-bf9d-46c011f09101",
+    "name": "Rikkei Commerce Microservices",
+    "description": "Kiểm thử toàn hệ thống chỉ qua API Gateway. Chạy collection tuần tự để tạo dữ liệu, đặt hàng, thanh toán và xem response tổng hợp.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Dữ liệu mẫu",
+      "item": [
+        {
+          "name": "Danh sách khách hàng",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/customers"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Có dữ liệu mẫu', () => pm.expect(pm.response.json().length).to.be.above(0));"]}
+          }]
+        },
+        {
+          "name": "Danh sách sản phẩm",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Có dữ liệu mẫu', () => pm.expect(pm.response.json().length).to.be.above(0));"]}
+          }]
+        },
+        {
+          "name": "Tổng quan đơn mẫu - một lần gọi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{seededOrderId}}/summary"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Đủ dữ liệu từ nhiều service', () => {", "  pm.expect(body.order.id).to.eql(1);", "  pm.expect(body.customer.email).to.exist;", "  pm.expect(body.lines.length).to.be.above(0);", "  pm.expect(body.lines[0].product.name).to.exist;", "  pm.expect(body.lines[0].currentInventory.availableQuantity).to.be.a('number');", "  pm.expect(body.payment.status).to.eql('PAID');", "});"]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Luồng mua hàng hoàn chỉnh",
+      "item": [
+        {
+          "name": "1. Tạo khách hàng",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Khách hàng Postman\",\n  \"email\": \"postman.{{$timestamp}}@example.com\",\n  \"phone\": \"0987654321\",\n  \"address\": \"Hà Nội\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/customers"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('Tạo khách hàng thành công', () => pm.response.to.have.status(201));", "pm.environment.set('customerId', pm.response.json().id);"]}
+          }]
+        },
+        {
+          "name": "2. Tạo sản phẩm",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Chuột không dây Postman\",\n  \"description\": \"Sản phẩm tạo từ collection\",\n  \"price\": 590000,\n  \"category\": \"ACCESSORY\",\n  \"active\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/products"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('Tạo sản phẩm thành công', () => pm.response.to.have.status(201));", "pm.environment.set('productId', pm.response.json().id);"]}
+          }]
+        },
+        {
+          "name": "3. Nhập tồn kho",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"quantity\": 20\n}"},
+            "url": "{{baseUrl}}/api/v1/inventories/product/{{productId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('Cập nhật kho thành công', () => pm.response.to.have.status(200));", "pm.test('Tồn kho bằng 20', () => pm.expect(pm.response.json().availableQuantity).to.eql(20));"]}
+          }]
+        },
+        {
+          "name": "4. Tạo đơn và giữ hàng",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customerId}},\n  \"items\": [\n    {\n      \"productId\": {{productId}},\n      \"quantity\": 2\n    },\n    {\n      \"productId\": 2,\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orders"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('Tạo đơn thành công', () => pm.response.to.have.status(201));", "const body = pm.response.json();", "pm.environment.set('orderId', body.id);", "pm.test('Tổng tiền đúng', () => pm.expect(Number(body.totalAmount)).to.eql(3070000));", "pm.test('Chờ thanh toán', () => pm.expect(body.status).to.eql('PENDING_PAYMENT'));"]}
+          }]
+        },
+        {
+          "name": "5. Xem tổng quan trước thanh toán",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/summary"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Chưa thanh toán', () => pm.expect(pm.response.json().payment.status).to.eql('NOT_PAID'));"]}
+          }]
+        },
+        {
+          "name": "6. Thanh toán đơn",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"orderId\": {{orderId}},\n  \"method\": \"BANK_TRANSFER\"\n}"},
+            "url": "{{baseUrl}}/api/v1/payments"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('Thanh toán thành công', () => pm.response.to.have.status(201));", "pm.test('Trạng thái PAID', () => pm.expect(pm.response.json().status).to.eql('PAID'));"]}
+          }]
+        },
+        {
+          "name": "7. Xem tổng quan sau thanh toán",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/summary"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {"exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Đơn và payment đồng bộ PAID', () => {", "  pm.expect(body.order.status).to.eql('PAID');", "  pm.expect(body.payment.status).to.eql('PAID');", "});", "pm.test('Kho sản phẩm mới đã trừ 2', () => {", "  const line = body.lines.find(x => x.product.id === Number(pm.environment.get('productId')));", "  pm.expect(line.currentInventory.availableQuantity).to.eql(18);", "});"]}
+          }]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8080"},
+    {"key": "seededOrderId", "value": "1"}
+  ]
+}
+

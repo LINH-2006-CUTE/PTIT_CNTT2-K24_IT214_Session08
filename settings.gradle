@@ -1,0 +1,11 @@
+rootProject.name = 'rikkei-commerce-microservices'
+
+include 'config-service'
+include 'eureka-service'
+include 'gateway-service'
+include 'customer-service'
+include 'product-service'
+include 'inventory-service'
+include 'order-service'
+include 'payment-service'
+
